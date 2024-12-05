@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos</title>
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding: 20px;
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1030;
+            width: 250px;
+            overflow-y: auto;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            display: block;
+        }
+        .sidebar a:hover {
+            text-decoration: underline;
+        }
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1029;
+        }
+        .navbar {
+            margin-bottom: 20px;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+        .green { color: green; }
+        .red { color: red; }
+        .ganador {
+            width: 40px;
+            text-align: center;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- NavBar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Gestión Productos</a>
+            <button class="btn btn-outline-light" id="openSidebar">Links</button>
+        </div>
+    </nav>
+
+    <!-- Panel Lateral -->
+    <div class="sidebar" id="sidebar">
+        <h5>Gestión de Links</h5>
+        <ul id="linkList"></ul>
+        <button id="loadLinks" class="btn btn-primary w-100 mb-2">Cargar Links</button>
+        <form id="linkForm">
+            <input type="text" class="form-control my-2" id="newLink" placeholder="Añadir nuevo link" required>
+            <button type="submit" class="btn btn-success w-100">Guardar Link</button>
+        </form>
+    </div>
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Contenido Principal -->
+    <div class="container mt-4">
+        <h1 class="text-center">Información de Productos</h1>
+        
+        <!-- Botón de Búsqueda -->
+        <button id="searchLinks" class="btn btn-primary mb-3">Buscar en Links</button>
+        
+        <!-- Tabla de Productos -->
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ganador</th>
+                    <th>Vendedor</th>
+                    <th>Título</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="productTable">
+                <!-- Filas dinámicas -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script personalizado -->
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        const openSidebar = document.getElementById('openSidebar');
+        const loadLinksButton = document.getElementById('loadLinks'); // Botón Cargar Links
+        const linkList = document.getElementById('linkList');
+        const productTable = document.getElementById('productTable');
+        const searchLinksButton = document.getElementById('searchLinks');
+        const linkForm = document.getElementById('linkForm');
+        const newLink = document.getElementById('newLink');
+
+        let links = [];
+
+        // Mostrar/ocultar panel lateral
+        openSidebar.addEventListener('click', () => {
+            sidebar.style.display = 'block';
+            overlay.style.display = 'block';
+        });
+
+        overlay.addEventListener('click', () => {
+            sidebar.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+
+        // Evento para cargar los links desde links.json
+        loadLinksButton.addEventListener('click', () => {
+            fetch('/links.json')
+                .then(response => response.json())
+                .then(data => {
+                    links = data;  // Guardamos los links en la variable links
+                    renderLinks();  // Mostramos los links en la lista
+                })
+                .catch(error => console.error('Error al cargar los links:', error));
+        });
+
+        // Función para renderizar los links en el panel lateral
+        function renderLinks() {
+            linkList.innerHTML = '';  // Limpiar la lista actual de links
+            links.forEach((link, index) => {
+                const li = document.createElement('li');
+                const linkElement = document.createElement('a');
+                const truncatedLink = truncateLink(link); // Obtener el link truncado
+                linkElement.href = link;
+                linkElement.target = '_blank';
+                linkElement.textContent = truncatedLink.text;
+                linkElement.title = link; // Mostrar el enlace completo al pasar el mouse
+                li.appendChild(linkElement);
+                linkList.appendChild(li);
+            });
+        }
+
+        // Función para truncar el link y reemplazar los "-" por espacio
+        function truncateLink(link) {
+            const url = new URL(link);
+            const pathname = url.pathname.split('/')[1];  // Obtener el segmento después del dominio
+            const truncated = pathname.replace(/-/g, ' ');  // Reemplazar los "-" por espacios
+            return { text: truncated, full: link };
+        }
+
+        // Evento para guardar un nuevo link
+        linkForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const newLinkValue = newLink.value.trim();
+            if (newLinkValue) {
+                fetch('/save-links', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ link: newLinkValue })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);  // Mensaje de confirmación
+                    newLink.value = '';  // Limpiar el campo de entrada
+                })
+                .catch(error => console.error('Error al guardar el link:', error));
+            }
+        });
+
+        // Función para realizar la búsqueda de links
+        searchLinksButton.addEventListener('click', () => {
+            productTable.innerHTML = ''; // Limpiar la tabla antes de agregar los nuevos resultados
+
+            links.forEach(link => {
+                fetch(`/scrape?url=${encodeURIComponent(link)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Vendedor:', data.sellerName);  // Para verificar cómo llega el nombre completo
+                        
+                        // Extraer el nombre del vendedor antes de cualquier otra información
+                        const sellerName = data.sellerName.split(' ')[0]; // Obtiene la primera palabra (nombre del vendedor)
+                        
+                        // Verifica si es TANGOID o IMARINE
+                        const winner = sellerName.includes("TANGOID") || sellerName.includes("IMARINE");
+                        const winnerIcon = winner ? '✔' : '❌';
+                        const winnerClass = winner ? 'green' : 'red';
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="ganador ${winnerClass}">${winnerIcon}</td>
+                            <td>${data.sellerName}</td>
+                            <td>${data.title}</td>
+                            <td>${data.priceText}</td>
+                            <td><a href="${link}" target="_blank" class="btn btn-info">Ver</a></td>
+                        `;
+                        productTable.appendChild(tr);
+                    })
+                    .catch(error => console.error('Error al obtener los datos del producto:', error));
+            });
+        });
+    </script>
+</body>
+</html>
