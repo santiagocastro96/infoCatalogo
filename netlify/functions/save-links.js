@@ -1,35 +1,49 @@
-// netlify/functions/save-links.js
 const fs = require('fs');
 const path = require('path');
 
-exports.handler = async function(event, context) {
-    const { link } = JSON.parse(event.body);  // Parsear el body JSON
+exports.handler = function(event, context) {
+    const { link } = JSON.parse(event.body);
+    if (!link) {
+        return {
+            statusCode: 400,
+            body: 'Se requiere un link.'
+        };
+    }
 
-    return new Promise((resolve, reject) => {
-        fs.readFile(path.join(__dirname, '..', 'links.json'), 'utf8', (err, data) => {
-            if (err) {
-                reject({ statusCode: 500, body: 'Error al leer el archivo links.json' });
-            }
+    fs.readFile(path.join(__dirname, '../links.json'), 'utf8', (err, data) => {
+        if (err) {
+            return {
+                statusCode: 500,
+                body: 'Error al leer el archivo links.json.'
+            };
+        }
 
-            let links = [];
-            try {
-                links = JSON.parse(data);
-            } catch (e) {
-                console.error('Error al parsear JSON:', e);
-            }
+        let links = [];
+        try {
+            links = JSON.parse(data);
+        } catch (e) {
+            // Si no hay contenido en el archivo o error en el parseo
+        }
 
-            if (link && !links.includes(link)) {
-                links.push(link);
-
-                fs.writeFile(path.join(__dirname, '..', 'links.json'), JSON.stringify(links, null, 2), (err) => {
-                    if (err) {
-                        reject({ statusCode: 500, body: 'Error al guardar los links.' });
-                    }
-                    resolve({ statusCode: 200, body: JSON.stringify({ message: 'Link guardado correctamente.' }) });
-                });
-            } else {
-                resolve({ statusCode: 200, body: JSON.stringify({ message: 'Este link ya está guardado o el link está vacío.' }) });
-            }
-        });
+        if (!links.includes(link)) {
+            links.push(link);
+            fs.writeFile(path.join(__dirname, '../links.json'), JSON.stringify(links, null, 2), (err) => {
+                if (err) {
+                    return {
+                        statusCode: 500,
+                        body: 'Error al guardar el link.'
+                    };
+                }
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({ message: 'Link guardado correctamente.' })
+                };
+            });
+        } else {
+            return {
+                statusCode: 400,
+                body: 'El link ya está guardado.'
+            };
+        }
     });
 };

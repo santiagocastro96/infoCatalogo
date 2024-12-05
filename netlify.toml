@@ -1,3 +1,6 @@
 [build]
-  command = "npm run start"
-  publish = "/"
+  command = "npm run build"
+  publish = "public"
+
+[functions]
+  directory = "netlify/functions"
